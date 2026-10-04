@@ -1,5 +1,7 @@
 # Disposable Rekolekt API for the kit's integration tests.
 # REKOLEKT_CORE_DIR must point at a core checkout at openapi/core-revision.txt.
+# run.sh seeds the database between migrations and API start. Nothing is
+# bind-mounted, so this also works when Docker runs outside the job container.
 name: rekolekt-web-it
 
 services:
@@ -40,17 +42,6 @@ services:
       db:
         condition: service_healthy
 
-  seed:
-    image: postgres:16
-    environment:
-      PGPASSWORD: postgres
-    volumes:
-      - ./seed.sql:/seed.sql:ro
-    command: ['psql', '-h', 'db', '-U', 'postgres', '-d', 'rekolekt_it', '-v', 'ON_ERROR_STOP=1', '-f', '/seed.sql']
-    depends_on:
-      migrations:
-        condition: service_completed_successfully
-
   api:
     image: rekolekt-web-it-api:${REKOLEKT_CORE_REVISION:-local}
     environment:
@@ -68,7 +59,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      seed:
+      migrations:
         condition: service_completed_successfully
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://localhost:8000/health']

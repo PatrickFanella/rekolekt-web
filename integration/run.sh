@@ -23,14 +23,17 @@ COMPOSE=(docker compose -p "${PROJECT}" -f "${ROOT}/integration/compose.yml")
 
 cleanup() {
   local status=$?
-  if [[ "${status}" != 0 ]]; then "${COMPOSE[@]}" logs --no-color --tail 200 api migrations seed >&2 || true; fi
+  if [[ "${status}" != 0 ]]; then "${COMPOSE[@]}" logs --no-color --tail 200 api migrations >&2 || true; fi
   "${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   exit "${status}"
 }
 trap cleanup EXIT INT TERM
 
 "${COMPOSE[@]}" build migrations
-"${COMPOSE[@]}" up -d --wait api
+"${COMPOSE[@]}" up -d --wait db redis
+"${COMPOSE[@]}" run --rm --no-deps migrations
+"${COMPOSE[@]}" exec -T db psql -U postgres -d rekolekt_it -v ON_ERROR_STOP=1 -q < "${ROOT}/integration/seed.sql"
+"${COMPOSE[@]}" up -d --wait --no-deps api
 port="$("${COMPOSE[@]}" port api 8000)"
 port="${port##*:}"
 export REKOLEKT_API_URL="http://${REKOLEKT_IT_HOST:-localhost}:${port}"

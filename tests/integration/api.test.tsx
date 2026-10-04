@@ -21,7 +21,8 @@ import {
 } from '../../src';
 
 const API = process.env.REKOLEKT_API_URL;
-if (!API) throw new Error('Set REKOLEKT_API_URL; run integration/run.sh to start a disposable API.');
+if (!API)
+  throw new Error('Set REKOLEKT_API_URL; run integration/run.sh to start a disposable API.');
 const VIDEO_ID = '00000000-0000-0000-0000-000000000201';
 
 const client = createRekolektClient({ baseUrl: API });
@@ -114,7 +115,9 @@ describe('hooks and components against the API', () => {
       );
     }
     render(<Search />, { wrapper });
-    expect(await screen.findByRole('heading', { name: 'Seeded integration episode' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Seeded integration episode' })
+    ).toBeInTheDocument();
     expect(screen.getAllByRole('group', { name: 'Moment actions' }).length).toBeGreaterThan(0);
   });
 
@@ -122,7 +125,14 @@ describe('hooks and components against the API', () => {
     function Reader() {
       const transcript = useTranscript(VIDEO_ID);
       if (!transcript.data) return <p>loading</p>;
-      return <Transcript videoId={VIDEO_ID} title="Seeded" segments={transcript.data.segments} currentMs={11_000} />;
+      return (
+        <Transcript
+          videoId={VIDEO_ID}
+          title="Seeded"
+          segments={transcript.data.segments}
+          currentMs={11_000}
+        />
+      );
     }
     render(<Reader />, { wrapper });
     const current = await screen.findByRole('button', { name: /Open Guest at 00:00:10/ });

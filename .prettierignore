@@ -3,3 +3,4 @@ coverage
 .artifacts
 src/types/generated
 openapi/openapi.json
+.core
