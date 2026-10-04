@@ -5,6 +5,7 @@
 First release of the headless kit, extracted from the frontend that lived in
 Rekolekt core until core `ae1cc82`. History for the moved files is preserved.
 
+- Built against core `5d71685` (the headless-core merge); see `openapi/core-revision.txt`.
 - Typed API client (`createRekolektClient`) with per-client CSRF handling, and
   OpenAPI types generated from a pinned core revision.
 - Provider for the client, query cache, `/site`, session, links and strings.
