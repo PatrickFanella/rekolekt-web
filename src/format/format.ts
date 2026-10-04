@@ -47,16 +47,33 @@ export function formatDate(value?: string | null) {
   return DATE_FORMAT.format(date);
 }
 
-export function formatVideoTitle(title?: string | null, uploadedAt?: string | null) {
+/**
+ * A readable episode title. Strips trailing dashes and labels date-only titles.
+ * Pass `labels` to change the wording used for date-only or missing titles.
+ */
+export function formatVideoTitle(
+  title?: string | null,
+  uploadedAt?: string | null,
+  labels: {
+    dated?: (date: string) => string;
+    fromDate?: (date: string) => string;
+    untitled?: string;
+  } = {}
+) {
+  const {
+    dated = (date) => `Broadcast — ${date}`,
+    fromDate = (date) => `Broadcast from ${date}`,
+    untitled = 'Broadcast recording',
+  } = labels;
   const cleaned = title?.replace(/\s*[-–—]\s*$/, '').trim();
   if (cleaned) {
     const dateOnly = cleaned.match(
       /^((?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},\s+\d{4})$/i
     );
-    return dateOnly ? `Broadcast — ${dateOnly[1]}` : cleaned;
+    return dateOnly ? dated(dateOnly[1]) : cleaned;
   }
   const date = formatDate(uploadedAt);
-  return date === '—' ? 'Broadcast recording' : `Broadcast from ${date}`;
+  return date === '—' ? untitled : fromDate(date);
 }
 export function formatDateTime(value?: string | null) {
   if (!value) return '—';
@@ -96,22 +113,6 @@ export function buildMonthRange(year: number, month: number) {
 }
 
 export type TranscriptSource = 'whisper' | 'youtube' | 'merged';
-
-export function canonicalMomentId(_source: TranscriptSource, startMs: number) {
-  return `moment-${Math.max(0, Math.floor(startMs))}`;
-}
-
-export function buildTimestampLink(
-  videoId: string,
-  startMs: number,
-  _sourceOrSegmentId?: TranscriptSource | number
-) {
-  void _sourceOrSegmentId;
-  const seconds = Math.max(0, Math.floor(startMs / 1000));
-  const params = new URLSearchParams({ t: String(seconds) });
-  if (startMs % 1000 !== 0) params.set('t_ms', String(Math.max(0, Math.floor(startMs))));
-  return `/v/${videoId}?${params.toString()}#moment-${Math.max(0, Math.floor(startMs))}`;
-}
 
 export function titleCase(value: string) {
   return value

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildPassageLink,
+  buildPassageShareLink,
   formatPassageTime,
   parsePassageTime,
   passageRangeError,
   readPassageRange,
-} from '../features/passages/range';
+} from '../transcript/passages';
 
 describe('passage URLs and times', () => {
   it('round trips a precise range without changing old timestamp conventions', () => {
@@ -39,8 +40,20 @@ describe('passage URLs and times', () => {
       const range = readPassageRange(new URLSearchParams(query))!;
       expect(passageRangeError(range.startMs, range.endMs)).toBeTruthy();
     }
-    expect(passageRangeError(0, 2000, 1000)).toMatch(/within/);
-    expect(passageRangeError(1000, 1000)).toMatch(/after/);
+    expect(passageRangeError(0, 2000, 1000)).toBe('beyond-recording');
+    expect(passageRangeError(1000, 1000)).toBe('order');
+    expect(passageRangeError(null, 1000)).toBe('invalid');
     expect(passageRangeError(0, 1000, 1000)).toBeNull();
+  });
+});
+
+describe('passage share links', () => {
+  it('points at the API share route under the configured base', () => {
+    expect(buildPassageShareLink('video 1', { startMs: 1000, endMs: 2500 })).toBe(
+      '/api/share/videos/video%201?start_ms=1000&end_ms=2500'
+    );
+    expect(
+      buildPassageShareLink('v', { startMs: 0, endMs: 1 }, 'https://archive.example/api/')
+    ).toBe('https://archive.example/api/share/videos/v?start_ms=0&end_ms=1');
   });
 });

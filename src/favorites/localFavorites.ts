@@ -1,4 +1,4 @@
-import type { TranscriptSource } from '../features/archive/format';
+import type { TranscriptSource } from '../format/format';
 
 type FavoriteKey = { videoId: string; segIndex: number };
 export type FavoriteItem = FavoriteKey & {
@@ -28,13 +28,30 @@ function save(items: FavoriteItem[]) {
 }
 
 let cache = load();
+const listeners = new Set<() => void>();
+function notify() {
+  for (const listener of listeners) listener();
+}
 
-export const favorites = {
+/** Signed-out saved moments, kept in localStorage under `favorites:v1`. */
+export const localFavorites = {
+  /** Call `listener` after any change; returns an unsubscribe function. */
+  subscribe(listener: () => void) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+  /** Stable reference until the next change (for useSyncExternalStore). */
+  snapshot(): readonly FavoriteItem[] {
+    return cache;
+  },
   list(): FavoriteItem[] {
     return [...cache];
   },
   reload(): FavoriteItem[] {
     cache = load();
+    notify();
     return [...cache];
   },
   has(key: FavoriteKey): boolean {
@@ -47,6 +64,7 @@ export const favorites = {
       cache = [item, ...cache];
     }
     save(cache);
+    notify();
   },
   remove(item: FavoriteItem) {
     cache = cache.filter(
@@ -58,5 +76,6 @@ export const favorites = {
         )
     );
     save(cache);
+    notify();
   },
 };

@@ -1,8 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Input } from 'ky';
-import { AuthProvider, useAuth } from '../services/auth';
-import { buildApiUrl, http, setCsrfToken } from '../services/api';
+import type { ReactNode } from 'react';
+import { AuthProvider as KitAuthProvider, useAuth } from '../auth/auth';
+import { createRekolektClient } from '../client/client';
+import { RekolektContext } from '../provider/context';
+import { DefaultLink } from '../components/primitives';
+import { defaultLinks } from '../format/links';
+
+const client = createRekolektClient({ baseUrl: '/api' });
+const http = client.http;
+const setCsrfToken = client.setCsrfToken;
+const buildApiUrl = (path: string) => client.url(path);
+
+function AuthProvider({ children }: { children: ReactNode }) {
+  return (
+    <RekolektContext.Provider
+      value={{ client, links: defaultLinks, Link: DefaultLink, analytics: null }}
+    >
+      <KitAuthProvider>{children}</KitAuthProvider>
+    </RekolektContext.Provider>
+  );
+}
 
 // Test component that uses auth
 function TestComponent() {

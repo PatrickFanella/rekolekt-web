@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { playbackQueue } from '../services/playbackQueue';
+import { playbackQueue } from '../search/playbackQueue';
 
 describe('playbackQueue', () => {
   const item = {
@@ -20,7 +20,7 @@ describe('playbackQueue', () => {
 
     playbackQueue.replace([item]);
     expect(localStorage.setItem).toHaveBeenLastCalledWith(
-      'hasanara.playback-queue.v1',
+      'rekolekt.playback-queue.v1',
       JSON.stringify([item])
     );
 

@@ -1,4 +1,4 @@
-import type { Segment } from '../../types/api';
+import type { Segment } from '../types/api';
 
 export type TopicCandidate = {
   key: string;

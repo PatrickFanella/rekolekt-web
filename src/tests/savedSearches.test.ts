@@ -7,7 +7,7 @@ vi.stubGlobal('localStorage', {
 });
 vi.stubGlobal('crypto', { randomUUID: () => 'local-id' });
 
-import { localSavedSearches, savedSearchKey } from '../services/savedSearches';
+import { localSavedSearches, savedSearchKey } from '../saved-searches/localSavedSearches';
 
 describe('local saved searches', () => {
   beforeEach(() => {

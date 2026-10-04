@@ -35,11 +35,27 @@ function save(items: SavedSearch[]) {
 }
 
 let cache = load();
+const listeners = new Set<() => void>();
+function notify() {
+  for (const listener of listeners) listener();
+}
 
+/** Signed-out saved searches, kept in localStorage under `saved-searches:v1`. */
 export const localSavedSearches = {
+  subscribe(listener: () => void) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+  /** Stable reference until the next change (for useSyncExternalStore). */
+  snapshot(): readonly SavedSearch[] {
+    return cache;
+  },
   list: () => [...cache],
   reload() {
     cache = load();
+    notify();
     return [...cache];
   },
   add(query: string, filters: SavedSearchFilters) {
@@ -51,10 +67,12 @@ export const localSavedSearches = {
     };
     cache = [item, ...cache];
     save(cache);
+    notify();
     return item;
   },
   remove(id: string) {
     cache = cache.filter((item) => item.id !== id);
     save(cache);
+    notify();
   },
 };

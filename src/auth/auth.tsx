@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { buildApiUrl, http, setCsrfToken } from './api';
+import { useRekolektClient } from '../provider/context';
 import type { OAuthProvider, UserRole } from '../types/api';
 
 export type User = {
@@ -9,12 +9,6 @@ export type User = {
   avatar_url?: string | null;
   plan?: string | null;
   role?: UserRole | null;
-};
-
-type AuthEnvelope = {
-  user: User | null;
-  role?: UserRole | null;
-  capabilities?: string[];
 };
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'error';
@@ -34,6 +28,8 @@ export type AuthState = {
   linkProvider: (provider: OAuthProvider) => Promise<void>;
   mergeProvider: (provider: OAuthProvider) => Promise<void>;
   logout: () => Promise<void>;
+  /** True when the session carries the named capability, e.g. `admin`. */
+  can: (capability: string) => boolean;
 };
 
 const AuthCtx = createContext<AuthState | null>(null);
@@ -42,7 +38,10 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Authentication request failed';
 }
 
+/** Loads `/auth/me`, keeps the CSRF token on the client, and exposes sign-in and sign-out. */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const client = useRekolektClient();
+  const setCsrfToken = client.setCsrfToken;
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -56,21 +55,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userRef.current = user;
   }, [user]);
 
-  const invalidateLocalAuth = useCallback((options?: { preserveUser?: boolean }) => {
-    authGeneration.current += 1;
-    refreshController.current?.abort();
-    refreshController.current = null;
-    if (!options?.preserveUser) setCsrfToken(null);
-    setRole(null);
-    setCapabilities([]);
-    setError(null);
-    if (options?.preserveUser) {
-      setStatus(userRef.current ? 'authenticated' : 'anonymous');
-      return;
-    }
-    setUser(null);
-    setStatus('anonymous');
-  }, []);
+  const invalidateLocalAuth = useCallback(
+    (options?: { preserveUser?: boolean }) => {
+      authGeneration.current += 1;
+      refreshController.current?.abort();
+      refreshController.current = null;
+      if (!options?.preserveUser) setCsrfToken(null);
+      setRole(null);
+      setCapabilities([]);
+      setError(null);
+      if (options?.preserveUser) {
+        setStatus(userRef.current ? 'authenticated' : 'anonymous');
+        return;
+      }
+      setUser(null);
+      setStatus('anonymous');
+    },
+    [setCsrfToken]
+  );
 
   const refresh = useCallback(async () => {
     refreshController.current?.abort();
@@ -81,17 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!userRef.current) setStatus('loading');
     try {
-      const response = await http
-        .get('auth/me', { signal: controller.signal })
-        .json<AuthEnvelope>();
+      const response = await client.getSession(controller.signal);
       if (!isCurrent()) return;
 
       if (response.user) {
         // Keep an existing token usable while the replacement is fetched.
         // Clearing it at refresh start creates a needless mutation failure window.
-        const csrf = await http
-          .get('auth/csrf', { signal: controller.signal })
-          .json<{ csrf_token: string }>();
+        const csrf = await client.getCsrf(controller.signal);
         if (!isCurrent()) return;
         setCsrfToken(csrf.csrf_token);
       } else {
@@ -114,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setStatus('error');
       throw requestError;
     }
-  }, []);
+  }, [client, setCsrfToken]);
 
   useEffect(() => {
     void refresh().catch(() => {
@@ -136,25 +134,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         capabilities,
         refresh,
         invalidateLocalAuth,
+        can: (capability: string) => capabilities.includes(capability),
         login: () => {
-          window.location.href = buildApiUrl('auth/login/google');
+          window.location.href = client.loginUrl('google');
         },
         loginTwitch: () => {
-          window.location.href = buildApiUrl('auth/login/twitch');
+          window.location.href = client.loginUrl('twitch');
         },
         loginWith: (provider: OAuthProvider) => {
-          window.location.href = buildApiUrl(`auth/login/${provider}`);
+          window.location.href = client.loginUrl(provider);
         },
         linkProvider: async (provider: OAuthProvider) => {
-          const response = await http
-            .post(`account/identities/${provider}/link`)
-            .json<{ authorization_url: string }>();
+          const response = await client.linkProvider(provider);
           window.location.href = response.authorization_url;
         },
         mergeProvider: async (provider: OAuthProvider) => {
-          const response = await http
-            .post(`account/identities/${provider}/merge`)
-            .json<{ authorization_url: string }>();
+          const response = await client.mergeProvider(provider);
           window.location.href = response.authorization_url;
         },
         logout: async () => {
@@ -165,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const isCurrent = () => generation === authGeneration.current;
 
           try {
-            await http.post('auth/logout').json();
+            await client.logout();
             if (!isCurrent()) return;
             invalidateLocalAuth();
           } catch (requestError: unknown) {
@@ -183,9 +178,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthCtx);
-  if (!ctx) throw new Error('AuthProvider missing');
+  if (!ctx)
+    throw new Error('AuthProvider missing: render inside <RekolektProvider> with auth enabled.');
   return ctx;
+}
+
+/** Like `useAuth`, but returns null outside an AuthProvider (e.g. `auth={false}`). */
+export function useOptionalAuth() {
+  return useContext(AuthCtx);
 }

@@ -1,16 +1,13 @@
 import { useEffect, useMemo } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { api, track } from '../../services';
-import type {
-  ArchiveSearchFilters,
-  EpisodeSearchGroup,
-  GroupedSearchResponse,
-} from '../../types/api';
+import { useRekolekt } from '../provider/context';
+import type { ArchiveSearchFilters, EpisodeSearchGroup, GroupedSearchResponse } from '../types/api';
 import type { SearchFilters } from './filters';
 
-const SEARCH_PAGE_SIZE = 20;
+export const SEARCH_PAGE_SIZE = 20;
 
-function mergeGroups(pages: GroupedSearchResponse[]): GroupedSearchResponse | null {
+/** Merge paginated grouped results so a later page extends, not replaces, an episode group. */
+export function mergeSearchPages(pages: GroupedSearchResponse[]): GroupedSearchResponse | null {
   if (!pages.length) return null;
   const byVideo = new Map<string, EpisodeSearchGroup>();
   for (const page of pages) {
@@ -29,8 +26,27 @@ function mergeGroups(pages: GroupedSearchResponse[]): GroupedSearchResponse | nu
   };
 }
 
-export function useArchiveSearch(filters: SearchFilters) {
-  const shouldFetch = Boolean(filters.q.trim());
+export type ArchiveSearchState = {
+  /** False while the query is blank; nothing is requested. */
+  enabled: boolean;
+  results: GroupedSearchResponse | null;
+  /** Initial request in flight. A later page uses `loadingMore` instead. */
+  loading: boolean;
+  loadingMore: boolean;
+  canLoadMore: boolean;
+  loadMore: () => void;
+  error: unknown;
+  retry: () => void;
+};
+
+/** Grouped transcript search with offset pagination. */
+export function useArchiveSearch(
+  filters: SearchFilters,
+  { pageSize = SEARCH_PAGE_SIZE }: { pageSize?: number } = {}
+): ArchiveSearchState {
+  const { client, analytics } = useRekolekt();
+  const query = filters.q.trim();
+  const enabled = Boolean(query);
   const activeFilters: ArchiveSearchFilters = useMemo(
     () => ({
       match_mode: filters.match_mode ?? 'topic',
@@ -38,40 +54,58 @@ export function useArchiveSearch(filters: SearchFilters) {
       date_to: filters.date_to,
       sort_by: filters.sort_by,
       video_id: filters.video_id,
-      limit: SEARCH_PAGE_SIZE,
+      category: filters.category,
+      limit: pageSize,
     }),
-    [filters]
+    [
+      filters.match_mode,
+      filters.date_from,
+      filters.date_to,
+      filters.sort_by,
+      filters.video_id,
+      filters.category,
+      pageSize,
+    ]
   );
-  const suggestions = useQuery({
-    queryKey: ['search-suggestions', 'a', 10],
-    queryFn: ({ signal }) => api.getSearchSuggestions('a', 10, signal),
-  });
   const search = useInfiniteQuery({
-    queryKey: ['search', filters.q.trim(), activeFilters],
-    enabled: shouldFetch,
+    queryKey: ['rekolekt', client.baseUrl, 'search', query, activeFilters],
+    enabled,
     retry: false,
     initialPageParam: 0,
     queryFn: ({ signal, pageParam }) =>
-      api.searchGrouped(filters.q.trim(), { ...activeFilters, offset: pageParam }, signal),
+      client.searchGrouped(query, { ...activeFilters, offset: pageParam }, signal),
     getNextPageParam: (lastPage) =>
       lastPage.page_info?.has_next_page ? (lastPage.page_info.next_offset ?? undefined) : undefined,
   });
 
   useEffect(() => {
-    if (shouldFetch) track({ type: 'search', payload: { ...activeFilters } });
-  }, [activeFilters, shouldFetch]);
+    if (enabled) analytics?.track({ type: 'search', payload: { ...activeFilters } });
+  }, [activeFilters, analytics, enabled, query]);
 
-  const grouped = useMemo(() => mergeGroups(search.data?.pages ?? []), [search.data?.pages]);
+  const results = useMemo(() => mergeSearchPages(search.data?.pages ?? []), [search.data?.pages]);
   return {
-    shouldFetch,
-    suggestedSearches: suggestions.data?.suggestions ?? [],
-    grouped,
-    // A later page must not replace already-visible results with the initial
-    // loading state. `loadingMore` owns that narrower pending state.
-    loading: shouldFetch && search.isPending,
+    enabled,
+    results,
+    loading: enabled && search.isPending,
     loadingMore: search.isFetchingNextPage,
     canLoadMore: Boolean(search.hasNextPage),
-    loadMore: search.fetchNextPage,
-    queryError: search.isError ? 'Search failed. Try again.' : null,
+    loadMore: () => void search.fetchNextPage(),
+    error: search.isError ? search.error : null,
+    retry: () => void search.refetch(),
+  };
+}
+
+/** Popular or prefix-matched search terms from `/search/suggestions`. */
+export function useSearchSuggestions(prefix: string, limit = 10) {
+  const { client } = useRekolekt();
+  const query = useQuery({
+    queryKey: ['rekolekt', client.baseUrl, 'search-suggestions', prefix, limit],
+    enabled: prefix.trim().length > 0,
+    queryFn: ({ signal }) => client.getSearchSuggestions(prefix.trim(), limit, signal),
+  });
+  return {
+    suggestions: query.data?.suggestions ?? [],
+    loading: query.isPending && query.fetchStatus !== 'idle',
+    error: query.isError ? query.error : null,
   };
 }

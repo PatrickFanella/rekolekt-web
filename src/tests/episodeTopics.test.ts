@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findEpisodeTopics } from '../features/videoTranscript/topics';
+import { findEpisodeTopics } from '../transcript/topics';
 
 const segments = [
   { start_ms: 0, end_ms: 1000, text: 'We talked about Gaza and the ICE raids.' },

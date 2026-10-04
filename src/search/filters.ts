@@ -1,4 +1,4 @@
-import type { ArchiveSearchFilters } from '../../types/api';
+import type { ArchiveSearchFilters } from '../types/api';
 
 export type SearchFilters = ArchiveSearchFilters & { q: string };
 const SORT_VALUES = new Set<NonNullable<ArchiveSearchFilters['sort_by']>>([

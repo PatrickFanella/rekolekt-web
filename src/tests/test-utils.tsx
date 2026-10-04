@@ -1,66 +1,76 @@
 import { render, type RenderOptions } from '@testing-library/react';
-import type { ReactElement } from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '../services/auth';
-import { ThemeProvider } from '../services/theme';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { createQueryClient } from '../services/query';
+import type { ReactElement, ReactNode } from 'react';
+import { vi } from 'vitest';
+import { createRekolektClient } from '../client/client';
+import {
+  RekolektProvider,
+  createQueryClient,
+  type RekolektProviderProps,
+} from '../provider/RekolektProvider';
+
+export type MockRoute =
+  unknown | ((request: Request, url: URL) => unknown | Response | Promise<unknown>);
 
 /**
- * Custom render function that wraps components with necessary providers
+ * A fetch double for the Rekolekt client. Keys are `METHOD /path` or `/path`
+ * (GET), relative to the API base. Unknown routes return 404.
  */
-export function renderWithRouter(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
-  return render(ui, {
-    wrapper: ({ children }) => <BrowserRouter>{children}</BrowserRouter>,
-    ...options,
+export function mockFetch(routes: Record<string, MockRoute>) {
+  const calls: Array<{ method: string; path: string; url: URL; request: Request; body: string }> =
+    [];
+  const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = input instanceof Request ? input : new Request(input, init);
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/^\/api/, '');
+    const body = request.method === 'GET' ? '' : await request.clone().text();
+    calls.push({ method: request.method, path, url, request, body });
+    const route =
+      routes[`${request.method} ${path}`] ?? (request.method === 'GET' ? routes[path] : undefined);
+    if (route === undefined) return new Response('{"detail":"not found"}', { status: 404 });
+    const result = typeof route === 'function' ? await route(request, url) : route;
+    if (result instanceof Response) return result;
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
   });
+  return { fetch: fetchImpl as unknown as typeof fetch, calls };
 }
 
-/**
- * Render with both Router and Auth providers
- */
-export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
-  const client = createQueryClient();
-  return render(ui, {
-    wrapper: ({ children }) => (
-      <BrowserRouter>
-        <QueryClientProvider client={client}>
-          <ThemeProvider>
-            <AuthProvider>{children}</AuthProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </BrowserRouter>
-    ),
-    ...options,
-  });
+export const siteFixture = {
+  schema_version: 1,
+  name: 'Test archive',
+  description: 'A test archive',
+  creator_name: 'Tester',
+  public_passages_enabled: true,
+  community_enabled: false,
+};
+
+export function createTestClient(routes: Record<string, MockRoute> = {}) {
+  const mock = mockFetch({ '/site': siteFixture, '/auth/me': { user: null }, ...routes });
+  const client = createRekolektClient({ baseUrl: 'http://archive.test/api', fetch: mock.fetch });
+  return { client, ...mock };
 }
 
-/**
- * Mock API response helper for ky
- */
-export function mockAPIResponse(data: unknown, status = 200) {
-  return {
-    json: async () => data,
-    status,
-    ok: status >= 200 && status < 300,
-  };
+/** Render inside a RekolektProvider whose client answers from `routes`. */
+export function renderWithKit(
+  ui: ReactElement,
+  {
+    routes = {},
+    provider = {},
+    ...options
+  }: Omit<RenderOptions, 'wrapper'> & {
+    routes?: Record<string, MockRoute>;
+    provider?: Partial<RekolektProviderProps>;
+  } = {}
+) {
+  const test = createTestClient(routes);
+  const queryClient = createQueryClient();
+  queryClient.setDefaultOptions({ queries: { retry: false } });
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <RekolektProvider client={test.client} queryClient={queryClient} {...provider}>
+      {children}
+    </RekolektProvider>
+  );
+  return { ...render(ui, { wrapper: Wrapper, ...options }), ...test, queryClient, Wrapper };
 }
-
-/**
- * Mock API error helper
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function mockAPIError(status: number, data?: any) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const error: any = new Error('HTTP Error');
-  error.response = {
-    status,
-    json: async () => data || { message: 'Error' },
-  };
-  return error;
-}
-
-/**
- * Wait for async operations
- */
-export const waitFor = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,0 +1,343 @@
+/*
+ * @subcult/rekolekt-web/base.css — optional neutral layout for the default components.
+ *
+ * Nothing in the kit requires this file. Every rule uses :where() so it has zero
+ * specificity: any selector of your own wins. Change the look by setting the
+ * custom properties below on :root or on any ancestor.
+ */
+:root {
+  --rk-font: inherit;
+  --rk-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --rk-text: CanvasText;
+  --rk-muted: GrayText;
+  --rk-surface: Canvas;
+  --rk-border: color-mix(in srgb, CanvasText 18%, transparent);
+  --rk-accent: LinkText;
+  --rk-accent-contrast: Canvas;
+  --rk-highlight: Mark;
+  --rk-highlight-text: MarkText;
+  --rk-danger: #b42318;
+  --rk-radius: 0.375rem;
+  --rk-space: 0.75rem;
+  --rk-focus: 2px solid var(--rk-accent);
+}
+
+:where([data-rk]) {
+  font-family: var(--rk-font);
+  color: var(--rk-text);
+  box-sizing: border-box;
+}
+
+:where([data-rk] button, [data-rk] input) {
+  font: inherit;
+  color: inherit;
+}
+
+:where([data-rk] button) {
+  cursor: pointer;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--rk-border);
+  border-radius: var(--rk-radius);
+  background: var(--rk-surface);
+}
+
+:where([data-rk] button:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+:where([data-rk] input) {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--rk-border);
+  border-radius: var(--rk-radius);
+  background: var(--rk-surface);
+}
+
+:where([data-rk] :focus-visible) {
+  outline: var(--rk-focus);
+  outline-offset: 2px;
+}
+
+:where([data-rk] mark) {
+  background: var(--rk-highlight);
+  color: var(--rk-highlight-text);
+}
+
+:where([data-rk] [role='status']:empty) {
+  display: none;
+}
+
+:where([data-rk='search-form']) {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+:where([data-rk='search-form'] [data-part='input']) {
+  flex: 1;
+  min-width: 0;
+}
+
+:where([data-rk='search-results'] > [data-part='list'], [data-rk='search-moments']) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--rk-space);
+}
+
+:where([data-rk='search-moments'] [data-part='moment']) {
+  display: grid;
+  gap: 0.35rem;
+  padding: var(--rk-space) 0;
+  border-top: 1px solid var(--rk-border);
+}
+
+:where([data-rk] time, [data-rk='transcript'] [data-part='timecode']) {
+  font-family: var(--rk-mono);
+  font-size: 0.85em;
+  color: var(--rk-muted);
+}
+
+:where([data-rk='moment-actions'], [data-rk='segment-actions']) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+:where([data-rk='moment-actions'] a[data-part='action']) {
+  padding: 0.35rem 0.2rem;
+}
+
+:where([data-part='action'][data-saved]) {
+  border-color: var(--rk-accent);
+}
+
+:where([data-rk='episode-list'] [data-part='list']) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--rk-space);
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+:where([data-rk='episode-card']) {
+  display: grid;
+  gap: 0.5rem;
+}
+
+:where([data-rk='episode-card'] [data-part='media']) {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--rk-radius);
+  background: var(--rk-border);
+}
+
+:where([data-rk='episode-card'] [data-part='thumbnail']) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+:where([data-rk='episode-card'] [data-part='duration']) {
+  position: absolute;
+  inset: auto 0.4rem 0.4rem auto;
+  padding: 0 0.3rem;
+  font-family: var(--rk-mono);
+  font-size: 0.8em;
+  background: var(--rk-surface);
+  border-radius: var(--rk-radius);
+}
+
+:where([data-rk='episode-card'] [data-part='title']) {
+  margin: 0;
+  font-size: 1rem;
+}
+
+:where([data-rk='episode-card'] [data-part='meta']) {
+  margin: 0;
+  color: var(--rk-muted);
+}
+
+:where([data-rk='episode-card'] [data-part='labels'], [data-rk='topic-list']) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+:where([data-rk='topic-list'] [data-part='count']) {
+  margin-inline-start: 0.35rem;
+  color: var(--rk-muted);
+}
+
+:where([data-rk='topic-list'] [data-selected] [data-part='control']) {
+  border-color: var(--rk-accent);
+}
+
+:where([data-rk='transcript']) {
+  display: grid;
+  gap: var(--rk-space);
+}
+
+:where([data-rk='transcript'] [data-part='turn']) {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 0 var(--rk-space);
+}
+
+:where([data-rk='transcript'] [data-part='turn'] > :not([data-part='meta'])) {
+  grid-column: 2;
+}
+
+:where([data-rk='transcript'] [data-part='meta']) {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+}
+
+:where([data-rk='transcript'] [data-part='timecode']) {
+  border: 0;
+  padding: 0;
+  background: none;
+  text-align: start;
+}
+
+:where([data-rk='transcript'] [data-part='text']) {
+  margin: 0;
+  line-height: 1.7;
+}
+
+:where([data-rk='transcript'] [data-part='segment']) {
+  all: unset;
+  cursor: pointer;
+  border-radius: 0.2rem;
+}
+
+:where([data-rk='transcript'] [data-part='segment']:focus-visible) {
+  outline: var(--rk-focus);
+}
+
+:where([data-rk='transcript'] [data-part='segment'][data-played]) {
+  color: var(--rk-muted);
+}
+
+:where([data-rk='transcript'] [data-part='segment'][data-current]) {
+  color: var(--rk-text);
+  text-decoration: underline;
+  text-decoration-color: var(--rk-accent);
+  text-underline-offset: 0.2em;
+}
+
+:where([data-rk='transcript'] [data-part='segment'][data-match]) {
+  background: var(--rk-highlight);
+  color: var(--rk-highlight-text);
+}
+
+:where([data-rk='transcript'] [data-part='segment'][data-selected]) {
+  outline: 1px solid var(--rk-accent);
+}
+
+:where([data-rk='transcript'] [data-part='segment'][data-saved])::after {
+  content: ' •';
+  color: var(--rk-accent);
+}
+
+:where([data-rk='player']) {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+:where([data-rk='player'] [data-part='frame']) {
+  width: 100%;
+  height: 100%;
+}
+
+:where([data-rk='player'] [data-part='overlay']) {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  color: #fff;
+  background: rgb(0 0 0 / 0.75);
+}
+
+:where([data-rk='passage-editor']) {
+  display: grid;
+  gap: var(--rk-space);
+  padding: var(--rk-space);
+  border: 1px solid var(--rk-border);
+  border-radius: var(--rk-radius);
+}
+
+:where([data-rk='passage-editor'] [data-part='fields']) {
+  display: grid;
+  gap: var(--rk-space);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+:where(
+  [data-rk='passage-editor'] [data-part='field'],
+  [data-rk='passage-editor'] [data-part='link']
+) {
+  display: grid;
+  gap: 0.25rem;
+}
+
+:where(
+  [data-rk='passage-editor'] [data-part='adjust'],
+  [data-rk='passage-editor'] [data-part='actions']
+) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+:where(
+  [data-rk='passage-editor'] [data-part='error'],
+  [data-rk='error-state'] [data-part='title']
+) {
+  color: var(--rk-danger);
+}
+
+:where([data-rk='passage-editor'] [data-part='contextList']) {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+:where([data-rk='notice']) {
+  display: block;
+  padding: var(--rk-space);
+  border-inline-start: 3px solid var(--rk-border);
+}
+
+:where(
+  [data-rk='saved-moments'] [data-part='list'],
+  [data-rk='saved-searches'] [data-part='list']
+) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--rk-space);
+}
+
+:where([data-rk='sign-in'] [data-part='providers']) {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 20rem;
+}
+
+:where([data-rk='loading-state'], [data-rk='empty-state']) {
+  color: var(--rk-muted);
+}

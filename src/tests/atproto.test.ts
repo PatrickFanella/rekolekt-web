@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { checkedPassage, createPublicRecord, publishAT } from '../services/atproto';
+import { checkedPassage, createPublicRecord, publishAT } from '../community/atproto';
 import type { OAuthSession } from '@atproto/oauth-client-browser';
 describe('AT public sharing boundaries', () => {
   it('only attaches a valid passage from this archive', () => {

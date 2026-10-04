@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { plainTextFromSnippet } from '../features/search/moments';
+import { plainTextFromSnippet } from '../search/moments';
 
 describe('search moment text', () => {
   it('preserves angle-bracket transcript text while removing paired legacy markers', () => {
@@ -13,7 +13,7 @@ describe('search moment text', () => {
   });
 });
 
-import { bucketMomentsByDate } from '../components/archive/SearchInsights';
+import { bucketMomentsByDate } from '../search/insights';
 
 describe('bucketMomentsByDate', () => {
   const group = (uploaded_at: string | null, count: number) =>
@@ -45,7 +45,7 @@ describe('bucketMomentsByDate', () => {
   it('groups by month within a single year', () => {
     expect(
       bucketMomentsByDate([group('2026-01-10T00:00:00Z', 1), group('2026-03-02T00:00:00Z', 3)]).map(
-        (bucket) => [bucket.label, bucket.count]
+        (bucket: { label: string; count: number }) => [bucket.label, bucket.count]
       )
     ).toEqual([
       ['Jan', 1],

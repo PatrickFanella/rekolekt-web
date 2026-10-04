@@ -1,4 +1,4 @@
-import type { Segment, TranscriptBlock, VideoChapter } from '../../types/api';
+import type { Segment, TranscriptBlock, VideoChapter } from '../types/api';
 import type { TranscriptTurn } from './transcript';
 
 export const MAX_CHAPTER_DURATION_MS = 15 * 60 * 1000;

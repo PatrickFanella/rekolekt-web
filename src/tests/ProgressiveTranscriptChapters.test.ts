@@ -4,7 +4,7 @@ import {
   buildProgressiveTranscriptChapters,
   chapterForSegment,
   mountedChapterIndexes,
-} from '../features/videoTranscript/progressiveChapters';
+} from '../transcript/progressiveChapters';
 
 function segments(count: number, spacingMs = 10_000) {
   return Array.from({ length: count }, (_, index) => ({

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import HighlightedSnippet from '../components/HighlightedSnippet';
+import { HighlightedSnippet } from '../components/HighlightedSnippet';
 
 describe('HighlightedSnippet', () => {
   it('applies backend ranges using Unicode code-point offsets', () => {

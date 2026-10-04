@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadYouTubeApi, resetYouTubeApiForTests } from '../services/youtubeApi';
+import { loadYouTubeApi, resetYouTubeApiForTests } from '../player/youtubeApi';
 
 describe('YouTube API loader', () => {
   afterEach(() => {

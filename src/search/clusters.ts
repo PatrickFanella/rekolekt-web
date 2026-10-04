@@ -1,4 +1,4 @@
-import type { SearchHit } from '../../types/api';
+import type { SearchHit } from '../types/api';
 
 export const NEARBY_MATCH_WINDOW_MS = 10_000;
 

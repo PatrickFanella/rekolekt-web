@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildTranscriptTurns,
-  normalizeTranscriptText,
-} from '../features/videoTranscript/transcript';
+import { buildTranscriptTurns, normalizeTranscriptText } from '../transcript/transcript';
 
 describe('video transcript kernels', () => {
   it('normalizes spacing without changing words', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCurrentFilters, readFilters, serializeFilters } from '../features/search/filters';
+import { buildCurrentFilters, readFilters, serializeFilters } from '../search/filters';
 
 describe('search filters helpers', () => {
   it('reads and serializes archive filters', () => {

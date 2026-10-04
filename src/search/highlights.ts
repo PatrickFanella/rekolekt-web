@@ -1,4 +1,4 @@
-import type { HighlightRange } from '../../types/api';
+import type { HighlightRange } from '../types/api';
 
 type MarkerToken = {
   start: number;

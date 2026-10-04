@@ -1,77 +1,56 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { http } from './api';
+import { useRekolektClient } from '../provider/context';
+import type { RekolektClient } from '../client/client';
+import { defaultSiteConfig, resolveSiteConfig, type SiteConfig } from './siteConfig';
 
-export type SiteConfig = {
-  schema_version?: 1;
-  tagline?: string;
-  operator_name?: string;
-  operator_url?: string;
-  project_notice?: string;
-  logo_url?: string;
-  favicon_url?: string;
-  social_image_url?: string;
-  theme?: {
-    font?: 'system' | 'editorial' | 'mono' | null;
-    dark?: Record<string, string>;
-    light?: Record<string, string>;
-  };
-  name: string;
-  description: string;
-  creator_name: string;
-  public_passages_enabled: boolean;
-  clip_exports_enabled?: boolean;
-  atproto_enabled?: boolean;
-  community_enabled: boolean;
-};
-const defaults: SiteConfig = {
-  name: 'Transcript Archive',
-  description:
-    'A searchable archive of timestamped transcripts, with each passage linked to its source recording.',
-  creator_name: 'the creators',
-  public_passages_enabled: true,
-  community_enabled: false,
-  schema_version: 1,
-  tagline: 'Broadcast archive',
-  operator_name: 'Archive team',
-  operator_url: '',
-  project_notice: 'Source recordings and trademarks belong to their respective owners.',
-  logo_url: '/icon.svg',
-  favicon_url: '/icon.svg',
-  social_image_url: '/social-card.svg',
-};
-const SiteContext = createContext<SiteConfig>(defaults);
+export type SiteStatus = 'loading' | 'ready' | 'fallback';
+export type SiteState = SiteConfig & { status: SiteStatus };
 
-export function SiteProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState(defaults);
-  useEffect(() => {
-    let active = true;
-    http
-      .get('site')
-      .json<SiteConfig>()
-      .then((next) => {
-        if (
-          active &&
-          (next.schema_version === undefined || next.schema_version === 1) &&
-          typeof next.name === 'string' &&
-          typeof next.creator_name === 'string' &&
-          typeof next.description === 'string' &&
-          typeof next.public_passages_enabled === 'boolean' &&
-          typeof next.community_enabled === 'boolean'
-        )
-          setConfig({ ...defaults, ...next });
-      })
-      .catch(() => {
-        // Preserve the existing archive if configuration cannot be fetched;
-        // opt-in community features remain off.
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  return <SiteContext.Provider value={config}>{children}</SiteContext.Provider>;
+const SiteContext = createContext<SiteState>({ ...defaultSiteConfig, status: 'loading' });
+
+/**
+ * Fetch and validate `/site`. Resolves to the defaults (merged with `fallback`)
+ * when the document is missing or not schema version 1.
+ */
+export async function loadSiteConfig(
+  client: RekolektClient,
+  { fallback = defaultSiteConfig, signal }: { fallback?: SiteConfig; signal?: AbortSignal } = {}
+): Promise<{ site: SiteConfig; valid: boolean }> {
+  const response: unknown = await client.getSite(signal);
+  const site = resolveSiteConfig(response, fallback);
+  return { site, valid: site !== fallback };
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
+export function SiteProvider({
+  children,
+  initialSite,
+}: {
+  children: ReactNode;
+  initialSite?: SiteConfig;
+}) {
+  const client = useRekolektClient();
+  const [state, setState] = useState<SiteState>(() => ({
+    ...(initialSite ?? defaultSiteConfig),
+    status: 'loading',
+  }));
+  useEffect(() => {
+    const controller = new AbortController();
+    const fallback = initialSite ?? defaultSiteConfig;
+    loadSiteConfig(client, { fallback, signal: controller.signal })
+      .then(({ site, valid }) => {
+        if (!controller.signal.aborted) setState({ ...site, status: valid ? 'ready' : 'fallback' });
+      })
+      .catch(() => {
+        // Keep the current values when configuration cannot be fetched; opt-in
+        // features such as community stay off.
+        if (!controller.signal.aborted) setState((current) => ({ ...current, status: 'fallback' }));
+      });
+    return () => controller.abort();
+  }, [client, initialSite]);
+  return <SiteContext.Provider value={state}>{children}</SiteContext.Provider>;
+}
+
+/** The archive's public configuration, with a `status` of loading, ready or fallback. */
 export function useSite() {
   return useContext(SiteContext);
 }

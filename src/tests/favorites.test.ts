@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, 'localStorage', {
 });
 
 // Now import favorites after mocking localStorage
-import { favorites } from '../services/favorites';
+import { localFavorites as favorites } from '../favorites/localFavorites';
 
 describe('favorites service', () => {
   beforeEach(() => {

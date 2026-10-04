@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ensureIndexVisible, windowAroundIndex } from '../features/videoTranscript/window';
+import { ensureIndexVisible, windowAroundIndex } from '../transcript/window';
 
 describe('transcript reading windows', () => {
   it('centers a bounded window on a cited moment in a long transcript', () => {

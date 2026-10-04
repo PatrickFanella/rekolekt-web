@@ -1,16 +1,13 @@
-import type { StreamLibraryFilters, VideoInfo } from '../../types/api';
+import type { StreamLibraryFilters, VideoInfo } from '../types/api';
+import { titleCase } from '../format/format';
 
 export const DEFAULT_LIMIT = 24;
 
-export const DATE_FIELD_OPTIONS = [
-  { value: 'uploaded_at', label: 'Uploaded date' },
-  { value: 'created_at', label: 'Created date' },
-  { value: 'updated_at', label: 'Updated date' },
-] as const;
+export const DATE_FIELDS = ['uploaded_at', 'created_at', 'updated_at'] as const;
 
 export type DateField = NonNullable<StreamLibraryFilters['date_field']>;
 
-export type FilterState = {
+export type LibraryFilterState = {
   q: string;
   completedOnly: boolean;
   dateField: DateField;
@@ -19,35 +16,10 @@ export type FilterState = {
   category: string;
 };
 
-export function formatDuration(seconds?: number | null) {
-  if (seconds == null || Number.isNaN(seconds)) return '—';
-  const total = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const remainingSeconds = total % 60;
-  return hours > 0
-    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`
-    : `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
-}
-
-export function formatDate(value?: string | null) {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
-}
-
-export function titleCase(value: string) {
-  return value
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-export function parseFilters(params: URLSearchParams): FilterState {
+/** Read episode-library filters from URL parameters, with safe defaults. */
+export function parseLibraryFilters(params: URLSearchParams): LibraryFilterState {
   const dateFieldParam = params.get('date_field');
-  const dateField = DATE_FIELD_OPTIONS.some((option) => option.value === dateFieldParam)
+  const dateField = DATE_FIELDS.some((value) => value === dateFieldParam)
     ? (dateFieldParam as DateField)
     : 'uploaded_at';
 
@@ -61,34 +33,43 @@ export function parseFilters(params: URLSearchParams): FilterState {
   };
 }
 
-export function statusBadge(video: VideoInfo) {
+/** Convert library filter state to API filters. */
+export function libraryFiltersToQuery(
+  state: LibraryFilterState,
+  limit = DEFAULT_LIMIT
+): StreamLibraryFilters {
+  return {
+    limit,
+    q: state.q || undefined,
+    completed_only: state.completedOnly || undefined,
+    date_field: state.dateField,
+    date_from: state.dateFrom || undefined,
+    date_to: state.dateTo || undefined,
+    category: state.category || undefined,
+  };
+}
+
+export type EpisodeStatus = 'attention' | 'ready' | 'processing' | 'unknown';
+
+/**
+ * Summarize an episode's processing, caption and diarization states. Returns a
+ * status code for styling and the raw state label for `unknown`.
+ */
+export function episodeStatus(video: VideoInfo): { status: EpisodeStatus; label: string } {
   const states = [video.state, video.caption_ingest_state, video.diarization_state]
     .filter(Boolean)
     .map((value) => String(value).toLowerCase());
 
-  if (states.some((value) => /error|failed|cancel/.test(value))) {
-    return {
-      label: 'Needs attention',
-      className:
-        'inline-flex items-center justify-center rounded-full bg-danger-soft px-2 pb-[3px] pt-[7px] text-center font-medium leading-none text-danger',
-    };
-  }
-
-  if (states.some((value) => /ready|complete|done|finished/.test(value))) {
-    return { label: 'Ready', className: 'badge-success' };
-  }
-
-  if (states.some((value) => /process|queue|pending|transcrib|ingest|sync/.test(value))) {
-    return { label: 'Processing', className: 'badge-warning' };
-  }
-
-  return {
-    label: titleCase(video.state ?? 'Unknown'),
-    className:
-      'inline-flex items-center justify-center rounded-full bg-surface-muted px-2 pb-[3px] pt-[7px] text-center font-medium leading-none text-muted',
-  };
+  if (states.some((value) => /error|failed|cancel/.test(value)))
+    return { status: 'attention', label: 'Needs attention' };
+  if (states.some((value) => /ready|complete|done|finished/.test(value)))
+    return { status: 'ready', label: 'Ready' };
+  if (states.some((value) => /process|queue|pending|transcrib|ingest|sync/.test(value)))
+    return { status: 'processing', label: 'Processing' };
+  return { status: 'unknown', label: titleCase(video.state ?? 'Unknown') };
 }
 
-export function dateFieldLabel(field: DateField) {
-  return DATE_FIELD_OPTIONS.find((option) => option.value === field)?.label ?? titleCase(field);
+/** YouTube thumbnail for an episode's source recording. */
+export function episodeThumbnailUrl(video: Pick<VideoInfo, 'youtube_id'>, size = 'hqdefault') {
+  return `https://i.ytimg.com/vi/${encodeURIComponent(video.youtube_id)}/${size}.jpg`;
 }

@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { dateFieldLabel, parseFilters, statusBadge } from '../features/streams/library';
+import {
+  episodeStatus,
+  episodeThumbnailUrl,
+  libraryFiltersToQuery,
+  parseLibraryFilters,
+} from '../episodes/library';
 
-describe('stream library helpers', () => {
-  it('parses query filters and labels date fields', () => {
-    const filters = parseFilters(
+describe('episode library helpers', () => {
+  it('parses query filters and converts them to API filters', () => {
+    const filters = parseLibraryFilters(
       new URLSearchParams({ q: 'vod', completed_only: 'true', date_field: 'created_at' })
     );
 
@@ -15,17 +20,39 @@ describe('stream library helpers', () => {
       dateTo: '',
       category: '',
     });
-    expect(dateFieldLabel('created_at')).toBe('Created date');
+    expect(libraryFiltersToQuery(filters, 12)).toEqual({
+      limit: 12,
+      q: 'vod',
+      completed_only: true,
+      date_field: 'created_at',
+      date_from: undefined,
+      date_to: undefined,
+      category: undefined,
+    });
+    expect(parseLibraryFilters(new URLSearchParams({ date_field: 'bogus' })).dateField).toBe(
+      'uploaded_at'
+    );
   });
 
-  it('maps stream states to badges', () => {
+  it('summarizes processing states as a status code', () => {
     expect(
-      statusBadge({
+      episodeStatus({
         state: 'ready',
         caption_ingest_state: 'done',
         diarization_state: 'done',
       } as never)
-    ).toMatchObject({ label: 'Ready' });
-    expect(statusBadge({ state: 'queued' } as never)).toMatchObject({ label: 'Processing' });
+    ).toEqual({ status: 'ready', label: 'Ready' });
+    expect(episodeStatus({ state: 'queued' } as never).status).toBe('processing');
+    expect(episodeStatus({ state: 'failed' } as never).status).toBe('attention');
+    expect(episodeStatus({ state: 'odd_state' } as never)).toEqual({
+      status: 'unknown',
+      label: 'Odd State',
+    });
+  });
+
+  it('builds the source thumbnail URL', () => {
+    expect(episodeThumbnailUrl({ youtube_id: 'abc' })).toBe(
+      'https://i.ytimg.com/vi/abc/hqdefault.jpg'
+    );
   });
 });

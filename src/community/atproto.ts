@@ -1,5 +1,5 @@
 import { BrowserOAuthClient, type OAuthSession } from '@atproto/oauth-client-browser';
-import { http } from './api';
+import type { RekolektClient } from '../client/client';
 
 export type ATConnection = { client: BrowserOAuthClient; session?: OAuthSession; resolver: string };
 // One init per document, including React StrictMode renders. Errors can be retried
@@ -12,9 +12,10 @@ export function onATInvalidated(listener: (sub: string) => void) {
   };
 }
 let initialization: Promise<ATConnection> | undefined;
-export function initializeAT() {
+/** Load the archive's AT Protocol OAuth client once per document. */
+export function initializeAT(api: RekolektClient) {
   initialization ??= (async () => {
-    const config = await http
+    const config = await api.http
       .get('atproto/config')
       .json<{ client_id: string; handle_resolver: string }>();
     const client = await BrowserOAuthClient.load({
@@ -30,6 +31,7 @@ export function initializeAT() {
   return initialization;
 }
 
+/** Accept only this archive's own `/api/share/videos/:id` passage URLs. */
 export function checkedPassage(value: string | null, origin: string): string | undefined {
   if (!value) return;
   let url: URL;
@@ -54,7 +56,14 @@ export function checkedPassage(value: string | null, origin: string): string | u
   return url.href;
 }
 
-export function createPublicRecord(body: string, passage?: string) {
+export function createPublicRecord(
+  body: string,
+  passage?: string,
+  embed: { title: string; description: string } = {
+    title: 'Watch this passage in context',
+    description: 'Open the source recording and selected transcript passage.',
+  }
+) {
   const text = body.trim();
   const graphemes = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)]
     .length;
@@ -72,8 +81,8 @@ export function createPublicRecord(body: string, passage?: string) {
             $type: 'app.bsky.embed.external' as const,
             external: {
               uri: passage,
-              title: 'Watch this passage in context',
-              description: 'Open the source recording and selected transcript passage.',
+              title: embed.title,
+              description: embed.description,
             },
           },
         }

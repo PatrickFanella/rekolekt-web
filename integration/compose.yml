@@ -1,0 +1,77 @@
+# Disposable Rekolekt API for the kit's integration tests.
+# REKOLEKT_CORE_DIR must point at a core checkout at openapi/core-revision.txt.
+name: rekolekt-web-it
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rekolekt_it
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d rekolekt_it']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrations:
+    image: rekolekt-web-it-api:${REKOLEKT_CORE_REVISION:-local}
+    build:
+      context: ${REKOLEKT_CORE_DIR:?set REKOLEKT_CORE_DIR to a core checkout}
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/rekolekt_it
+      ALLOW_SESSION_TOKEN_CONTRACT_MIGRATION: 'true'
+      ALLOW_EVENT_TOKEN_CONTRACT_MIGRATION: 'true'
+    command: ['python3', 'scripts/run_migrations.py', 'upgrade']
+    depends_on:
+      db:
+        condition: service_healthy
+
+  seed:
+    image: postgres:16
+    environment:
+      PGPASSWORD: postgres
+    volumes:
+      - ./seed.sql:/seed.sql:ro
+    command: ['psql', '-h', 'db', '-U', 'postgres', '-d', 'rekolekt_it', '-v', 'ON_ERROR_STOP=1', '-f', '/seed.sql']
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+
+  api:
+    image: rekolekt-web-it-api:${REKOLEKT_CORE_REVISION:-local}
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/rekolekt_it
+      REDIS_URL: redis://redis:6379/0
+      SEARCH_BACKEND: postgres
+      SITE_NAME: Integration archive
+      SITE_DESCRIPTION: Seeded archive for the rekolekt-web integration tests.
+      SITE_CREATOR_NAME: Integration creator
+      SESSION_SECRET: integration-session-secret-2026-0b5e
+      ANALYTICS_HMAC_SECRET: integration-analytics-secret-2026-7c1d
+      OTEL_SDK_DISABLED: 'true'
+    ports:
+      - '${REKOLEKT_IT_API_PORT:-0}:8000'
+    depends_on:
+      redis:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8000/health']
+      interval: 2s
+      timeout: 3s
+      retries: 60

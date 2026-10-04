@@ -1,4 +1,4 @@
-import type { SearchHit, Segment } from '../../types/api';
+import type { SearchHit, Segment } from '../types/api';
 
 export type TranscriptTurn = {
   key: string;
