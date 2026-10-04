@@ -20,11 +20,14 @@ for reference. It is not maintained or published.
 
 ## Install
 
-The package is published to the SUBCULT Gitea npm registry. Add the scope to
-your project's `.npmrc` (use a token with `read:package` if the registry asks for one):
+The package is published to the SUBCULT Gitea npm registry, which requires
+sign-in for reads. Add the scope and a Gitea token with `read:package` to your
+project's or user's `.npmrc`; keep the token out of the repository (for
+example, put the second line in `~/.npmrc` or a CI secret):
 
 ```ini
 @subcult:registry=https://git.subcult.tv/api/packages/subculture-collective/npm/
+//git.subcult.tv/api/packages/subculture-collective/npm/:_authToken=${GITEA_PACKAGE_TOKEN}
 ```
 
 ```sh
@@ -264,7 +267,9 @@ migrations, seeds one episode (`integration/seed.sql`), and runs
 
 Bump `version` in `package.json`, add a `CHANGELOG.md` entry, merge, then push a
 `v<version>` tag. The release workflow verifies the tag matches the package
-version, runs the checks and publishes to the Gitea npm registry.
+version, runs the checks and publishes to the Gitea npm registry with the
+organization's `REGISTRY_PAT` secret. Version 0.1.0 was published by hand from
+`main` by the `subcult-agent` account, without a tag.
 
 ## License
 
