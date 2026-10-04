@@ -4050,16 +4050,31 @@ export interface components {
         };
         /**
          * BrandTheme
-         * @description Optional overrides of the default design. Unset fields keep the stylesheet's values.
+         * @deprecated
+         * @description Deprecated visual overrides from the site profile: font choice and colour tokens.
+         *
+         *     Still served so existing frontends keep working. New frontends should own their styling.
          */
         BrandTheme: {
-            /** Dark */
+            /**
+             * Dark
+             * @deprecated
+             * @description Deprecated: frontends own their styling. Still served so existing frontends keep working.
+             */
             dark?: {
                 [key: string]: string;
             };
-            /** Font */
+            /**
+             * Font
+             * @deprecated
+             * @description Deprecated: frontends own their styling. Still served so existing frontends keep working.
+             */
             font?: ("system" | "editorial" | "mono") | null;
-            /** Light */
+            /**
+             * Light
+             * @deprecated
+             * @description Deprecated: frontends own their styling. Still served so existing frontends keep working.
+             */
             light?: {
                 [key: string]: string;
             };
@@ -5719,6 +5734,10 @@ export interface components {
              * @default Broadcast archive
              */
             tagline: string;
+            /**
+             * @deprecated
+             * @description Deprecated: frontends own their styling. Still served so existing frontends keep working.
+             */
             theme?: components["schemas"]["BrandTheme"];
         };
         /** SupportConfig */
