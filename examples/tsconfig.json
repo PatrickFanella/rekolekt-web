@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": { "@subcult/rekolekt-web": ["../src/index.ts"] }
+  },
+  "include": ["src", "vite.config.ts"]
+}

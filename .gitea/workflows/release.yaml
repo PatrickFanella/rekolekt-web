@@ -1,0 +1,54 @@
+name: Publish package
+
+# Push a tag v<package.json version> to publish to the Gitea npm registry.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+# The tagged commit should already have passed "Kit verification" on main,
+# including the integration tests; this job repeats the offline checks.
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout kit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Require the tag to match the package version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF" = "refs/tags/v$version" || { echo "Tag $GITHUB_REF does not match package version $version" >&2; exit 1; }
+      - name: Verify and build
+        env:
+          OPENAPI_OFFLINE: '1'
+        run: |
+          npm ci
+          npm run api:check
+          npm run lint
+          npm run type-check
+          npm test
+          npm run build
+          npm run pack:check
+      - name: Publish
+        env:
+          NPM_PUBLISH_TOKEN: ${{ secrets.REGISTRY_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$NPM_PUBLISH_TOKEN" || { echo 'REGISTRY_PAT is not available to this repository' >&2; exit 1; }
+          auth_dir="$(mktemp -d)"
+          trap 'rm -rf "$auth_dir"' EXIT
+          export NPM_CONFIG_USERCONFIG="$auth_dir/npmrc"
+          printf '%s\n' \
+            '@subcult:registry=https://git.subcult.tv/api/packages/subculture-collective/npm/' \
+            '//git.subcult.tv/api/packages/subculture-collective/npm/:_authToken=${NPM_PUBLISH_TOKEN}' \
+            > "$NPM_CONFIG_USERCONFIG"
+          chmod 600 "$NPM_CONFIG_USERCONFIG"
+          npm publish

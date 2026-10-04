@@ -1,0 +1,111 @@
+/* Plain CSS against the kit's data attributes; no base stylesheet. */
+body {
+  margin: 0;
+  font:
+    17px/1.6 Georgia,
+    'Times New Roman',
+    serif;
+  background: #fbf7ef;
+  color: #2b2118;
+}
+
+.example {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+[data-rk] button {
+  font: inherit;
+  font-size: 0.85rem;
+  border: 0;
+  border-bottom: 2px solid #b4532a;
+  background: none;
+  padding: 0.1rem 0.2rem;
+  margin-right: 0.6rem;
+  cursor: pointer;
+}
+
+[data-rk='search-form'] {
+  display: flex;
+  border: 2px solid #2b2118;
+}
+
+[data-rk='search-form'] [data-part='input'] {
+  flex: 1;
+  border: 0;
+  padding: 0.6rem;
+  font: inherit;
+  background: transparent;
+}
+
+[data-rk='search-moments'],
+[data-rk='episode-list'] ul,
+[data-rk='search-results'] ol,
+[data-rk='topic-list'] {
+  list-style: none;
+  padding: 0;
+}
+
+[data-rk='episode-card'] [data-part='media'] {
+  display: none;
+}
+
+[data-rk='episode-card'] [data-part='title'] {
+  font-size: 1.1rem;
+  margin: 0.8rem 0 0;
+}
+
+[data-rk='transcript'] [data-part='turn'] {
+  margin-bottom: 1rem;
+}
+
+[data-rk='transcript'] [data-part='speaker'] {
+  font-variant: small-caps;
+  margin-left: 0.5rem;
+}
+
+[data-rk='transcript'] [data-part='segment'] {
+  all: unset;
+  cursor: pointer;
+}
+
+[data-rk='transcript'] [data-part='segment'][data-played] {
+  opacity: 0.6;
+}
+
+[data-rk='transcript'] [data-part='segment'][data-current] {
+  background: #f4d9a6;
+}
+
+[data-rk='transcript'] [data-part='segment'][data-selected] {
+  box-shadow: inset 0 -2px #b4532a;
+}
+
+[data-rk='transcript'] [data-part='segment']:focus-visible {
+  outline: 2px dashed #b4532a;
+}
+
+[data-rk='topic-list'] [data-selected] button {
+  background: #2b2118;
+  color: #fbf7ef;
+}
+
+[data-rk='player'] {
+  aspect-ratio: 16 / 9;
+}
+
+[data-rk='player'] [data-part='frame'] {
+  width: 100%;
+  height: 100%;
+}
+
+[data-rk='notice'] {
+  display: block;
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+mark {
+  background: #f4d9a6;
+}
