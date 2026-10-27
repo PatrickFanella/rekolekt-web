@@ -87,3 +87,29 @@ jobs:
           done)"
           [[ "$gateway" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]
           REKOLEKT_CORE_DIR="$PWD/.core" REKOLEKT_IT_HOST="$gateway" integration/run.sh
+
+  required:
+    name: Required checks
+    if: always()
+    needs: [verify, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation job to pass
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          results = json.loads(os.environ['RESULTS'])
+          required = {'verify', 'integration'}
+          if not isinstance(results, dict) or set(results) != required:
+              raise SystemExit('Required check inventory is incomplete or unexpected')
+          failed = {name: job.get('result') if isinstance(job, dict) else 'invalid'
+                    for name, job in results.items()
+                    if not isinstance(job, dict) or job.get('result') != 'success'}
+          if failed:
+              raise SystemExit(f'Required checks did not pass: {failed}')
+          print('All required checks passed')
+          PY
