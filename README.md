@@ -1,6 +1,7 @@
 # @subcult/rekolekt-web
 
-Headless frontend kit for [Rekolekt](https://git.subcult.tv/subculture-collective/rekolekt) archives.
+Headless frontend kit for [Rekolekt](https://github.com/subculture-collective/rekolekt)
+archives. Version 0.1.0 is the first release.
 
 Rekolekt core is a backend and API only. Each archive builds and owns its whole
 frontend: routes, pages, layout, design system, fonts and brand assets. This
@@ -15,24 +16,31 @@ package supplies what an archive frontend would otherwise rewrite:
 
 It ships no pages and no visual design. The Rekolekt-designed app that used to
 live in core, including its Playwright suite, is kept unchanged on the branch
-[`archive/reference-app-ae1cc82`](https://git.subcult.tv/subculture-collective/rekolekt-web/src/branch/archive/reference-app-ae1cc82)
+[`archive/reference-app-ae1cc82`](https://github.com/subculture-collective/rekolekt-web/tree/archive/reference-app-ae1cc82)
 for reference. It is not maintained or published.
 
 ## Install
 
-The package is published to the SUBCULT Gitea npm registry, which requires
-sign-in for reads. Add the scope and a Gitea token with `read:package` to your
-project's or user's `.npmrc`; keep the token out of the repository (for
-example, put the second line in `~/.npmrc` or a CI secret):
+The package is not on the public npm registry. Build it from this repository
+and install the tarball:
+
+```sh
+git clone https://github.com/subculture-collective/rekolekt-web.git
+cd rekolekt-web
+npm ci && npm run build && npm pack
+# in your app
+npm install /path/to/rekolekt-web/subcult-rekolekt-web-0.1.0.tgz @tanstack/react-query react react-dom
+```
+
+Releases are also published to SUBCULT's own npm registry, which requires an
+account to read:
 
 ```ini
 @subcult:registry=https://git.subcult.tv/api/packages/subculture-collective/npm/
-//git.subcult.tv/api/packages/subculture-collective/npm/:_authToken=${GITEA_PACKAGE_TOKEN}
+//git.subcult.tv/api/packages/subculture-collective/npm/:_authToken=${SUBCULT_PACKAGE_TOKEN}
 ```
 
-```sh
-npm install @subcult/rekolekt-web @tanstack/react-query react react-dom
-```
+Keep the token out of the repository, for example in `~/.npmrc` or a CI secret.
 
 React 19 and TanStack Query 5 are peer dependencies. `@atproto/oauth-client-browser`
 is an optional peer, needed only for `@subcult/rekolekt-web/atproto`.
@@ -266,11 +274,20 @@ migrations, seeds one episode (`integration/seed.sql`), and runs
 ## Releasing
 
 Bump `version` in `package.json`, add a `CHANGELOG.md` entry, merge, then push a
-`v<version>` tag. The release workflow verifies the tag matches the package
-version, runs the checks and publishes to the Gitea npm registry with the
-organization's `REGISTRY_PAT` secret. Version 0.1.0 was published by hand from
-`main` by the `subcult-agent` account, without a tag.
+`v<version>` tag. The release workflow checks that the tag matches the package
+version, runs the checks and publishes the package.
+
+## Contributing
+
+Report bugs and request features in
+[GitHub issues](https://github.com/subculture-collective/rekolekt-web/issues).
+Send code as a pull request on GitHub against `main`. Pull requests are checked
+with the OpenAPI contract check, lint, formatting, type check, unit and
+component tests, the package build and file list, the example build, an npm
+audit for high-severity advisories, and the integration tests against the
+pinned core API. Changes to API behaviour belong in
+[Rekolekt](https://github.com/subculture-collective/rekolekt).
 
 ## License
 
-Apache-2.0
+[Apache License 2.0](LICENSE).
