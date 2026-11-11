@@ -1,0 +1,104 @@
+name: PR CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout kit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Read pinned core revision
+        id: core
+        run: echo "revision=$(tr -d '[:space:]' < openapi/core-revision.txt)" >> "$GITHUB_OUTPUT"
+      - name: Checkout pinned core for the contract check
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: subculture-collective/rekolekt
+          ref: ${{ steps.core.outputs.revision }}
+          path: .core
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci
+      - name: OpenAPI contract
+        env:
+          REKOLEKT_CORE_DIR: .core
+        run: npm run api:check
+      - name: Lint
+        run: npm run lint
+      - name: Format
+        run: npm run format:check
+      - name: Type check
+        run: npm run type-check
+      - name: Unit and component tests
+        run: npm run test:coverage
+      - name: Build package
+        run: npm run build
+      - name: Check published files
+        run: npm run pack:check
+      - name: Build example
+        run: npx vite build --config examples/vite.config.ts
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+  integration:
+    name: Integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout kit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Read pinned core revision
+        id: core
+        run: echo "revision=$(tr -d '[:space:]' < openapi/core-revision.txt)" >> "$GITHUB_OUTPUT"
+      - name: Checkout pinned core
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: subculture-collective/rekolekt
+          ref: ${{ steps.core.outputs.revision }}
+          path: .core
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci
+      - name: Integration tests against a disposable core API
+        # Hosted runners run jobs directly on the Docker host, so published
+        # ports are reachable on localhost (integration/run.sh's default).
+        run: REKOLEKT_CORE_DIR="$PWD/.core" integration/run.sh
+
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs: [verify, integration]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every verification job
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          results = json.loads(os.environ["RESULTS"])
+          expected = {'verify', 'integration'}
+          assert set(results) == expected, results
+          for name, result in results.items():
+              assert result["result"] == "success", name + " did not pass"
+          PY
